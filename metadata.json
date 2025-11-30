@@ -1,5 +1,5 @@
 {
-  "name": "Taiwan Tax & Health Insurance Calculator",
+  "name": "各類所得扣繳及二代健保扣繳計算機",
   "description": "A calculator for Taiwan withholding tax and 2nd generation health insurance premiums (Income types 9A, 9B, 50, 92) based on residency status.",
   "requestFramePermissions": []
 }

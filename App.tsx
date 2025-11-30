@@ -5,15 +5,15 @@ import InfoCards from './components/InfoCards';
 const App: React.FC = () => {
   return (
     <div className="min-h-screen pb-12">
-      {/* Header Decoration - Softer Gradient */}
-      <div className="h-48 bg-gradient-to-br from-cyan-400 to-cyan-600 w-full absolute top-0 left-0 z-0"></div>
+      {/* Header Decoration - Custom Theme Gradient #AFDFE4 */}
+      <div className="h-48 bg-gradient-to-br from-[#AFDFE4] to-[#8AC8D0] w-full absolute top-0 left-0 z-0"></div>
       
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-12">
         <div className="text-center mb-10 text-white">
-           <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight drop-shadow-sm">
+           <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight drop-shadow-md text-[#235860]">
              各類扣繳及補充保費計算機
            </h1>
-           <p className="text-cyan-50 text-lg opacity-90 max-w-2xl mx-auto font-medium">
+           <p className="text-[#36727B] text-lg opacity-90 max-w-2xl mx-auto font-medium">
              教你分辨 4 種勞報單常見所得類別，輕鬆計算二代健保與代扣稅款。
            </p>
         </div>

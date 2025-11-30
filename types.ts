@@ -1,7 +1,9 @@
 export enum IncomeType {
   TYPE_9A = '9A', // 執行業務所得
   TYPE_9B = '9B', // 稿費
+  TYPE_51 = '51', // 租賃所得
   TYPE_50 = '50', // 兼職所得
+  TYPE_91 = '91', // 競賽及中獎
   TYPE_92 = '92', // 其他所得
 }
 

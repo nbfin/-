@@ -73,10 +73,12 @@ const Calculator: React.FC = () => {
       // === Resident Logic ===
       
       // 1. Health Insurance
-      if (type === IncomeType.TYPE_92) {
+      if (type === IncomeType.TYPE_92 || type === IncomeType.TYPE_91) {
+         // Type 91 and 92 are not subject to 2nd Gen Health Insurance
          healthRate = 0;
-         messages.push('代號92：不需扣繳二代健保');
-      } else if (type === IncomeType.TYPE_9A || type === IncomeType.TYPE_9B) {
+         if (type === IncomeType.TYPE_91) messages.push('代號91：不需扣繳二代健保');
+         if (type === IncomeType.TYPE_92) messages.push('代號92：不需扣繳二代健保');
+      } else if (type === IncomeType.TYPE_9A || type === IncomeType.TYPE_9B || type === IncomeType.TYPE_51) {
          if (union) {
             healthRate = 0;
             messages.push('已於職業工會投保：免扣繳補充保費');
@@ -84,7 +86,7 @@ const Calculator: React.FC = () => {
             healthRate = 0;
             messages.push('給付對象為事務所 (非個人身分投保)：免扣繳補充保費');
          } else {
-            const threshold = THRESHOLD_HEALTH_9A_9B;
+            const threshold = THRESHOLD_HEALTH_9A_9B; // 20,000 for 9A, 9B, 51
             if (gross >= threshold) {
               healthRate = RESIDENT_HEALTH_RATE;
               healthAmount = Math.floor(gross * healthRate);
@@ -112,7 +114,8 @@ const Calculator: React.FC = () => {
         let taxThreshold = 0;
         let applicableRate = 0;
 
-        if (type === IncomeType.TYPE_9A || type === IncomeType.TYPE_9B) {
+        if (type === IncomeType.TYPE_9A || type === IncomeType.TYPE_9B || type === IncomeType.TYPE_51 || type === IncomeType.TYPE_91) {
+          // 9A, 9B, 51, 91 all share the same resident tax threshold (20,010) and rate (10%)
           taxThreshold = THRESHOLD_TAX_RESIDENT_9A_9B;
           applicableRate = RESIDENT_TAX_RATE_9A_9B;
         } else if (type === IncomeType.TYPE_50) {
@@ -120,10 +123,10 @@ const Calculator: React.FC = () => {
           applicableRate = RESIDENT_TAX_RATE_50;
         }
 
-        if (gross > taxThreshold) {
+        if (gross >= taxThreshold) {
           taxRate = applicableRate;
           taxAmount = Math.floor(gross * taxRate);
-          messages.push(`超過扣繳門檻 (${taxThreshold.toLocaleString()}元)：需扣 ${taxRate * 100}% 所得稅`);
+          messages.push(`達扣繳門檻 (${taxThreshold.toLocaleString()}元)：需扣 ${taxRate * 100}% 所得稅`);
         } else {
           messages.push(`未達所得稅扣繳門檻 (${taxThreshold.toLocaleString()}元)`);
         }
@@ -147,6 +150,11 @@ const Calculator: React.FC = () => {
            taxAmount = Math.floor(gross * taxRate);
            messages.push('超過 5,000元：扣繳 20%');
         }
+      } else if (type === IncomeType.TYPE_51 || type === IncomeType.TYPE_91) {
+        // 51 and 91 for non-residents have no threshold (start from $1), flat 20%
+        taxRate = NON_RESIDENT_TAX_RATE_HIGH;
+        taxAmount = Math.floor(gross * taxRate);
+        messages.push(`${type === IncomeType.TYPE_51 ? '租賃所得' : '競賽獎金'} (非居住者)：無起扣點，扣繳 20%`);
       } else if (type === IncomeType.TYPE_50) {
         if (gross <= THRESHOLD_TAX_NON_RESIDENT_50) {
           taxRate = NON_RESIDENT_TAX_RATE_LOW_50;
@@ -226,21 +234,16 @@ const Calculator: React.FC = () => {
     // Keep mode as is
   };
 
-  const toggleMode = () => {
-    setMode(prev => prev === CalcMode.GROSS_TO_NET ? CalcMode.NET_TO_GROSS : CalcMode.GROSS_TO_NET);
-    setAmount(''); // Clear amount to avoid confusion
-  };
-
   return (
-    <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-cyan-100">
-      {/* Softer Header Color: cyan-500 instead of 600 */}
-      <div className="bg-cyan-500 p-6 text-white flex justify-between items-center">
+    <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-[#D8F1F5]">
+      {/* Header - Custom Theme #AFDFE4 */}
+      <div className="bg-[#AFDFE4] p-6 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
+          <h2 className="text-2xl font-bold flex items-center gap-2 text-[#235860]">
             <CalcIcon className="w-6 h-6" />
             {mode === CalcMode.GROSS_TO_NET ? '正向扣繳試算' : '反向推算給付'}
           </h2>
-          <p className="text-cyan-50 text-sm mt-1">
+          <p className="text-[#3F8E96] text-sm mt-1 font-medium">
             {mode === CalcMode.GROSS_TO_NET 
               ? '輸入「給付金額」算出「實領金額」' 
               : '輸入「實領金額」反推「給付金額」'}
@@ -248,7 +251,7 @@ const Calculator: React.FC = () => {
         </div>
         <button 
           onClick={handleReset}
-          className="p-2 bg-cyan-600 rounded-full hover:bg-cyan-700 transition-colors shadow-sm"
+          className="p-2 bg-[#9BCFD4] rounded-full hover:bg-[#8ABCC1] transition-colors shadow-sm text-white"
           title="重置"
         >
           <RefreshCw className="w-5 h-5" />
@@ -261,17 +264,6 @@ const Calculator: React.FC = () => {
         <div className="flex bg-gray-100 p-1 rounded-xl">
           <button
             className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-              mode === CalcMode.GROSS_TO_NET
-                ? 'bg-white text-cyan-500 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-            onClick={() => setMode(CalcMode.GROSS_TO_NET)}
-          >
-            <ArrowRight className="w-4 h-4" />
-            算實領 (由給付推算)
-          </button>
-          <button
-            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
               mode === CalcMode.NET_TO_GROSS
                 ? 'bg-white text-indigo-500 shadow-sm' 
                 : 'text-gray-500 hover:text-gray-700'
@@ -281,17 +273,28 @@ const Calculator: React.FC = () => {
             <ArrowLeftRight className="w-4 h-4" />
             算給付 (由實領反推)
           </button>
+          <button
+            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+              mode === CalcMode.GROSS_TO_NET
+                ? 'bg-white text-[#4A9CA6] shadow-sm' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => setMode(CalcMode.GROSS_TO_NET)}
+          >
+            <ArrowRight className="w-4 h-4" />
+            算實領 (由給付推算)
+          </button>
         </div>
 
         {/* Input Section */}
         <div className="space-y-6">
           
           {/* Residency Toggle */}
-          <div className="flex bg-cyan-50 p-1 rounded-xl w-full sm:w-fit">
+          <div className="flex bg-[#F2FBFC] p-1 rounded-xl w-full sm:w-fit">
              <button
                 className={`flex-1 sm:flex-none py-2 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                   residency === ResidencyStatus.RESIDENT 
-                    ? 'bg-white text-cyan-600 shadow-sm' 
+                    ? 'bg-white text-[#3F8E96] shadow-sm' 
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
                 onClick={() => setResidency(ResidencyStatus.RESIDENT)}
@@ -302,7 +305,7 @@ const Calculator: React.FC = () => {
              <button
                 className={`flex-1 sm:flex-none py-2 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                   residency === ResidencyStatus.NON_RESIDENT 
-                    ? 'bg-white text-cyan-600 shadow-sm' 
+                    ? 'bg-white text-[#3F8E96] shadow-sm' 
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
                 onClick={() => setResidency(ResidencyStatus.NON_RESIDENT)}
@@ -329,7 +332,7 @@ const Calculator: React.FC = () => {
                 className={`w-full pl-8 pr-4 py-3 bg-gray-50 border-2 rounded-xl outline-none transition-colors text-lg font-medium text-gray-800 placeholder-gray-300 ${
                   mode === CalcMode.NET_TO_GROSS 
                     ? 'border-indigo-100 focus:border-indigo-400' 
-                    : 'border-gray-100 focus:border-cyan-400'
+                    : 'border-gray-100 focus:border-[#AFDFE4]'
                 }`}
               />
             </div>
@@ -352,8 +355,8 @@ const Calculator: React.FC = () => {
                   onClick={() => setIncomeType(key as IncomeType)}
                   className={`py-3 px-4 rounded-xl text-left border-2 transition-all ${
                     incomeType === key 
-                      ? 'border-cyan-400 bg-cyan-50 text-cyan-700' 
-                      : 'border-gray-100 bg-white text-gray-500 hover:border-cyan-200'
+                      ? 'border-[#AFDFE4] bg-[#F2FBFC] text-[#3F8E96]' 
+                      : 'border-gray-100 bg-white text-gray-500 hover:border-[#D8F1F5]'
                   }`}
                 >
                   <div className="font-bold">{key}</div>
@@ -364,7 +367,7 @@ const Calculator: React.FC = () => {
           </div>
 
           {/* Additional Options */}
-          {(incomeType === IncomeType.TYPE_9A || incomeType === IncomeType.TYPE_9B) && residency === ResidencyStatus.RESIDENT && (
+          {(incomeType === IncomeType.TYPE_9A || incomeType === IncomeType.TYPE_9B || incomeType === IncomeType.TYPE_51) && residency === ResidencyStatus.RESIDENT && (
             <div className="space-y-3">
               {/* Trade Union Option */}
               <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${hasTradeUnion ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-100'}`}>
@@ -376,7 +379,7 @@ const Calculator: React.FC = () => {
                     setHasTradeUnion(e.target.checked);
                     if (e.target.checked) setIsFirm(false);
                   }}
-                  className="w-5 h-5 text-cyan-500 rounded focus:ring-cyan-400 border-gray-300 cursor-pointer"
+                  className="w-5 h-5 text-[#AFDFE4] rounded focus:ring-[#AFDFE4] border-gray-300 cursor-pointer"
                 />
                 <label htmlFor="tradeUnion" className="text-sm text-gray-700 font-medium cursor-pointer select-none">
                   個人已於職業工會投保 (免扣二代健保)
@@ -393,7 +396,7 @@ const Calculator: React.FC = () => {
                     setIsFirm(e.target.checked);
                     if (e.target.checked) setHasTradeUnion(false);
                   }}
-                  className="w-5 h-5 text-cyan-500 rounded focus:ring-cyan-400 border-gray-300 cursor-pointer mt-1"
+                  className="w-5 h-5 text-[#AFDFE4] rounded focus:ring-[#AFDFE4] border-gray-300 cursor-pointer mt-1"
                 />
                 <div className="flex-1">
                   <label htmlFor="isFirm" className="text-sm text-gray-700 font-medium cursor-pointer select-none flex items-center gap-2">
@@ -416,14 +419,14 @@ const Calculator: React.FC = () => {
         <div className="space-y-4">
           
           {/* Main Result Display (Swaps based on mode) */}
-          <div className={`p-5 rounded-2xl text-white shadow-lg transition-colors ${
-            mode === CalcMode.NET_TO_GROSS ? 'bg-indigo-500 shadow-indigo-100' : 'bg-cyan-500 shadow-cyan-100'
+          <div className={`p-5 rounded-2xl shadow-lg transition-colors ${
+            mode === CalcMode.NET_TO_GROSS ? 'bg-indigo-500 shadow-indigo-100 text-white' : 'bg-[#AFDFE4] shadow-[#D8F1F5] text-[#235860]'
           }`}>
             <div className="flex justify-between items-center mb-2">
-               <span className="text-white/90 font-medium text-sm">
+               <span className={`font-medium text-sm ${mode === CalcMode.NET_TO_GROSS ? 'text-white/90' : 'text-[#235860]/80'}`}>
                  {mode === CalcMode.NET_TO_GROSS ? '應申報給付總額 (Gross)' : '實領金額 (Net)'}
                </span>
-               <ArrowRight className="w-5 h-5 text-white/60" />
+               <ArrowRight className={`w-5 h-5 ${mode === CalcMode.NET_TO_GROSS ? 'text-white/60' : 'text-[#235860]/50'}`} />
             </div>
             <div className="text-4xl font-bold">
                $ {mode === CalcMode.NET_TO_GROSS ? result.incomeAmount.toLocaleString() : result.netPay.toLocaleString()}
@@ -466,10 +469,10 @@ const Calculator: React.FC = () => {
           {/* Calculation Messages */}
           {result.messages.length > 0 && (
             <div className={`rounded-xl p-4 border ${
-               mode === CalcMode.NET_TO_GROSS ? 'bg-indigo-50 border-indigo-100' : 'bg-cyan-50 border-cyan-100'
+               mode === CalcMode.NET_TO_GROSS ? 'bg-indigo-50 border-indigo-100' : 'bg-[#F2FBFC] border-[#AFDFE4]'
             }`}>
               <div className={`flex items-center gap-2 font-bold text-sm mb-2 ${
-                 mode === CalcMode.NET_TO_GROSS ? 'text-indigo-600' : 'text-cyan-700'
+                 mode === CalcMode.NET_TO_GROSS ? 'text-indigo-600' : 'text-[#3F8E96]'
               }`}>
                 <HelpCircle className="w-4 h-4" />
                 {mode === CalcMode.NET_TO_GROSS ? '反推計算說明' : '計算說明'}
@@ -477,10 +480,10 @@ const Calculator: React.FC = () => {
               <ul className="space-y-1">
                 {result.messages.map((msg, idx) => (
                   <li key={idx} className={`text-xs flex items-start gap-1.5 ${
-                     mode === CalcMode.NET_TO_GROSS ? 'text-indigo-800' : 'text-cyan-800'
+                     mode === CalcMode.NET_TO_GROSS ? 'text-indigo-800' : 'text-[#4A8890]'
                   }`}>
                     <span className={`mt-1 block w-1 h-1 rounded-full flex-shrink-0 ${
-                       mode === CalcMode.NET_TO_GROSS ? 'bg-indigo-400' : 'bg-cyan-400'
+                       mode === CalcMode.NET_TO_GROSS ? 'bg-indigo-400' : 'bg-[#AFDFE4]'
                     }`} />
                     {msg}
                   </li>
